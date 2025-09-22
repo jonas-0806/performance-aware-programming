@@ -2,9 +2,6 @@ const std = @import("std");
 const debug = @import("../debug.zig");
 const decoder = @import("../decoder.zig");
 
-// for memory mov, which expression does rm encode, except displacement and except when mod = 00 and r/m = 110
-const rmExpressions: [8][]const u8 = .{ "bx + si", "bx + di", "bp + si", "bp + di", "si", "di", "bp", "bx" };
-
 pub fn decodeRegMem(bytes: []const u8, scratchpad: []u8) !struct { u3, u5 } {
     var s: []u8 = undefined;
     var written: u5 = undefined;
@@ -24,13 +21,13 @@ pub fn decodeRegMem(bytes: []const u8, scratchpad: []u8) !struct { u3, u5 } {
                 s = try std.fmt.bufPrint(scratchpad, "mov {s}, [{d}]\n", .{ dest, displacement });
                 bytesConsumed = 4;
             } else if (d) {
-                const source = rmExpressions[rm];
+                const source = decoder.rmExpressions[rm];
                 const dest = registers[reg];
                 s = try std.fmt.bufPrint(scratchpad, "mov {s}, [{s}]\n", .{ dest, source });
                 bytesConsumed = 2;
             } else {
                 const source = registers[reg];
-                const dest = rmExpressions[rm];
+                const dest = decoder.rmExpressions[rm];
                 s = try std.fmt.bufPrint(scratchpad, "mov [{s}], {s}\n", .{ dest, source });
                 bytesConsumed = 2;
             }
@@ -38,7 +35,7 @@ pub fn decodeRegMem(bytes: []const u8, scratchpad: []u8) !struct { u3, u5 } {
         0b01 => {
             const displacement = bytes[2];
             if (d) {
-                const source = rmExpressions[rm];
+                const source = decoder.rmExpressions[rm];
                 const dest = registers[reg];
                 if (displacement == 0) {
                     s = try std.fmt.bufPrint(scratchpad, "mov {s}, [{s}]\n", .{ dest, source });
@@ -47,7 +44,7 @@ pub fn decodeRegMem(bytes: []const u8, scratchpad: []u8) !struct { u3, u5 } {
                 }
             } else {
                 const source = registers[reg];
-                const dest = rmExpressions[rm];
+                const dest = decoder.rmExpressions[rm];
                 if (displacement == 0) {
                     s = try std.fmt.bufPrint(scratchpad, "mov [{s}], {s}\n", .{ dest, source });
                 } else {
@@ -59,12 +56,12 @@ pub fn decodeRegMem(bytes: []const u8, scratchpad: []u8) !struct { u3, u5 } {
         0b10 => {
             const displacement: u16 = (@as(u16, bytes[3]) << 8) + bytes[2];
             if (d) {
-                const source = rmExpressions[rm];
+                const source = decoder.rmExpressions[rm];
                 const dest = registers[reg];
                 s = try std.fmt.bufPrint(scratchpad, "mov {s}, [{s} + {d}]\n", .{ dest, source, displacement });
             } else {
                 const source = registers[reg];
-                const dest = rmExpressions[rm];
+                const dest = decoder.rmExpressions[rm];
                 s = try std.fmt.bufPrint(scratchpad, "mov [{s} + {d}], {s}\n", .{ dest, displacement, source });
             }
             bytesConsumed = 4;

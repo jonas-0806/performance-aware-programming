@@ -8,7 +8,11 @@ const trashcan = @import("trashcan.zig");
 pub const byteRegisters: [8][]const u8 = .{ "al", "cl", "dl", "bl", "ah", "ch", "dh", "bh" };
 pub const wordRegisters: [8][]const u8 = .{ "ax", "cx", "dx", "bx", "sp", "bp", "si", "di" };
 
+// for memory mov, which expression does rm encode, except displacement and except when mod = 00 and r/m = 110
+pub const rmExpressions: [8][]const u8 = .{ "bx + si", "bx + di", "bp + si", "bp + di", "si", "di", "bp", "bx" };
+
 const movDecoder = @import("decoders/movDecoder.zig");
+const addSubCmpDecoder = @import("decoders/addSubCompDecoder.zig");
 
 pub fn decodeInstructionStream(source: []const u8, dest: []const u8) !void {
     var outputDir = try std.fs.openDirAbsolute(outputPath, .{});
@@ -22,7 +26,7 @@ pub fn decodeInstructionStream(source: []const u8, dest: []const u8) !void {
     var writer = std.Io.Writer.fixed(&result);
     var written: usize = try writer.write("bits 16\n\n");
 
-    var scratchpad: [64]u8 = undefined;
+    var scratchpad: [32]u8 = undefined;
     var info: struct { u3, u5 } = undefined;
     while (inputCursor < bytesRead) {
         const slice = input[inputCursor..@min(inputCursor + 6, bytesRead)];
@@ -48,7 +52,12 @@ fn decode(slice: []u8, scratchpad: []u8) !struct { u3, u5 } {
         return try movDecoder.decodeMemToAcc(slice, scratchpad);
     } else if (opCode >> 1 == 0b1010001) {
         return try movDecoder.decodeAccToMem(slice, scratchpad);
+    } else if (opCode >> 2 == 0b0) {
+        return try addSubCmpDecoder.deodeRegMem(slice, scratchpad, "add");
+    } else if (opCode >> 1 == 0b0000010) {
+        return try addSubCmpDecoder.decodeImmToAcc(slice, scratchpad, "add");
     } else {
+        std.debug.print("{b}\n", .{slice[0]});
         unreachable;
     }
 }
