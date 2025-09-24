@@ -3,7 +3,7 @@ const debug = @import("../debug.zig");
 const decoder = @import("../decoder.zig");
 
 pub fn decodeRegMem(bytes: []const u8, scratchpad: []u8) !struct { u3, u5 } {
-    var s: []u8 = undefined;
+    var tmp: []u8 = undefined;
     var written: u5 = undefined;
     var bytesConsumed: u3 = undefined;
     const d = bytes[0] & (1 << 1) > 0;
@@ -18,17 +18,17 @@ pub fn decodeRegMem(bytes: []const u8, scratchpad: []u8) !struct { u3, u5 } {
                 std.debug.assert(d);
                 const displacement: u16 = (@as(u16, bytes[3]) << 8) + bytes[2];
                 const dest = registers[reg];
-                s = try std.fmt.bufPrint(scratchpad, "mov {s}, [{d}]\n", .{ dest, displacement });
+                tmp = try std.fmt.bufPrint(scratchpad, "mov {s}, [{d}]\n", .{ dest, displacement });
                 bytesConsumed = 4;
             } else if (d) {
                 const source = decoder.rmExpressions[rm];
                 const dest = registers[reg];
-                s = try std.fmt.bufPrint(scratchpad, "mov {s}, [{s}]\n", .{ dest, source });
+                tmp = try std.fmt.bufPrint(scratchpad, "mov {s}, [{s}]\n", .{ dest, source });
                 bytesConsumed = 2;
             } else {
                 const source = registers[reg];
                 const dest = decoder.rmExpressions[rm];
-                s = try std.fmt.bufPrint(scratchpad, "mov [{s}], {s}\n", .{ dest, source });
+                tmp = try std.fmt.bufPrint(scratchpad, "mov [{s}], {s}\n", .{ dest, source });
                 bytesConsumed = 2;
             }
         },
@@ -38,17 +38,17 @@ pub fn decodeRegMem(bytes: []const u8, scratchpad: []u8) !struct { u3, u5 } {
                 const source = decoder.rmExpressions[rm];
                 const dest = registers[reg];
                 if (displacement == 0) {
-                    s = try std.fmt.bufPrint(scratchpad, "mov {s}, [{s}]\n", .{ dest, source });
+                    tmp = try std.fmt.bufPrint(scratchpad, "mov {s}, [{s}]\n", .{ dest, source });
                 } else {
-                    s = try std.fmt.bufPrint(scratchpad, "mov {s}, [{s} + {d}]\n", .{ dest, source, displacement });
+                    tmp = try std.fmt.bufPrint(scratchpad, "mov {s}, [{s} + {d}]\n", .{ dest, source, displacement });
                 }
             } else {
                 const source = registers[reg];
                 const dest = decoder.rmExpressions[rm];
                 if (displacement == 0) {
-                    s = try std.fmt.bufPrint(scratchpad, "mov [{s}], {s}\n", .{ dest, source });
+                    tmp = try std.fmt.bufPrint(scratchpad, "mov [{s}], {s}\n", .{ dest, source });
                 } else {
-                    s = try std.fmt.bufPrint(scratchpad, "mov [{s} + {d}], {s}\n", .{ dest, displacement, source });
+                    tmp = try std.fmt.bufPrint(scratchpad, "mov [{s} + {d}], {s}\n", .{ dest, displacement, source });
                 }
             }
             bytesConsumed = 3;
@@ -58,23 +58,23 @@ pub fn decodeRegMem(bytes: []const u8, scratchpad: []u8) !struct { u3, u5 } {
             if (d) {
                 const source = decoder.rmExpressions[rm];
                 const dest = registers[reg];
-                s = try std.fmt.bufPrint(scratchpad, "mov {s}, [{s} + {d}]\n", .{ dest, source, displacement });
+                tmp = try std.fmt.bufPrint(scratchpad, "mov {s}, [{s} + {d}]\n", .{ dest, source, displacement });
             } else {
                 const source = registers[reg];
                 const dest = decoder.rmExpressions[rm];
-                s = try std.fmt.bufPrint(scratchpad, "mov [{s} + {d}], {s}\n", .{ dest, displacement, source });
+                tmp = try std.fmt.bufPrint(scratchpad, "mov [{s} + {d}], {s}\n", .{ dest, displacement, source });
             }
             bytesConsumed = 4;
         },
         0b11 => {
             const source = if (d) registers[rm] else registers[reg];
             const dest = if (d) registers[reg] else registers[rm];
-            s = try std.fmt.bufPrint(scratchpad, "mov {s}, {s}\n", .{ dest, source });
+            tmp = try std.fmt.bufPrint(scratchpad, "mov {s}, {s}\n", .{ dest, source });
             bytesConsumed = 2;
         },
         else => unreachable,
     }
-    written = @truncate(s.len);
+    written = @truncate(tmp.len);
     return .{ bytesConsumed, written };
 }
 

@@ -13,16 +13,17 @@ pub const rmExpressions: [8][]const u8 = .{ "bx + si", "bx + di", "bp + si", "bp
 
 const movDecoder = @import("decoders/movDecoder.zig");
 const addSubCmpDecoder = @import("decoders/addSubCompDecoder.zig");
+const jumpAndLoopDecoder = @import("decoders/jumpAndLoopDecoder.zig");
 
 pub fn decodeInstructionStream(source: []const u8, dest: []const u8) !void {
     var outputDir = try std.fs.openDirAbsolute(outputPath, .{});
     defer outputDir.close();
 
-    var input: [512]u8 = undefined;
+    var input: [2048]u8 = undefined;
     var inputCursor: u32 = 0;
-    const bytesRead = try trashcan.readToBuffer(inputPath, source, input[0..]);
+    const bytesRead = try trashcan.readToBuffer(inputPath, source, &input);
 
-    var result: [512]u8 = undefined;
+    var result: [2048]u8 = undefined;
     var writer = std.Io.Writer.fixed(&result);
     var written: usize = try writer.write("bits 16\n\n");
 
@@ -56,10 +57,33 @@ fn decode(slice: []u8, scratchpad: []u8) !struct { u3, u5 } {
         return try addSubCmpDecoder.deodeRegMem(slice, scratchpad, "add");
     } else if (opCode >> 1 == 0b0000010) {
         return try addSubCmpDecoder.decodeImmToAcc(slice, scratchpad, "add");
+    } else if (opCode >> 2 == 0b100000) {
+        return try addSubCmpDecoder.decodeImmToRegOrMem(slice, scratchpad);
+    } else if (opCode >> 2 == 0b001010) {
+        return try addSubCmpDecoder.deodeRegMem(slice, scratchpad, "sub");
+    } else if (opCode >> 1 == 0b0010110) {
+        return try addSubCmpDecoder.decodeImmToAcc(slice, scratchpad, "sub");
+    } else if (opCode >> 2 == 0b001110) {
+        return try addSubCmpDecoder.deodeRegMem(slice, scratchpad, "cmp");
+    } else if (opCode >> 1 == 0b0011110) {
+        return try addSubCmpDecoder.decodeImmToAcc(slice, scratchpad, "cmp");
     } else {
-        std.debug.print("{b}\n", .{slice[0]});
-        unreachable;
+        return try jumpAndLoopDecoder.decodeJumpOrLoop(slice, scratchpad);
     }
+}
+
+pub fn GetImmediate(bytes: []const u8, s: bool, w: bool) u16 {
+    if (!s and !w) {
+        return @as(u16, bytes[0]);
+    } else if (!s and w) {
+        return (@as(u16, bytes[1]) << 8) + bytes[0];
+    } else if (s and !w) {
+        return @as(u16, bytes[0]);
+    } else if (s and w) {
+        const msb = bytes[0] >> 7 & 0b1 > 0;
+        return if (msb) 0xff00 + @as(u16, bytes[0]) else @as(u16, bytes[0]);
+    }
+    unreachable;
 }
 
 test "listing37" {
@@ -74,5 +98,10 @@ test "listing38" {
 
 test "listing39" {
     try decodeInstructionStream("listing39", "listing39.asm");
+    try std.testing.expect(try trashcan.filesEqual(inputPath, "listing39.asm", outputPath, "listing39.asm"));
+}
+
+test "listing41_nojumps" {
+    try decodeInstructionStream("listing41_nojumps", "listing41_nojumps.asm");
     try std.testing.expect(try trashcan.filesEqual(inputPath, "listing39.asm", outputPath, "listing39.asm"));
 }

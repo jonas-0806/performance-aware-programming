@@ -87,3 +87,62 @@ pub fn decodeImmToAcc(bytes: []const u8, scratchpad: []u8, op: []const u8) !stru
     const bytesConsumed: u3 = if (w) 3 else 2;
     return .{ bytesConsumed, @truncate(tmp.len) };
 }
+
+pub fn decodeImmToRegOrMem(bytes: []const u8, scratchpad: []u8) !struct { u3, u5 } {
+    var tmp: []u8 = undefined;
+    var written: u5 = undefined;
+    var bytesConsumed: u3 = undefined;
+    const s = bytes[0] & 0b10 > 0;
+    const w = bytes[0] & 0b1 > 0;
+    const mod = (bytes[1] >> 6) & 0b11;
+    const rm = bytes[1] & 0b111;
+    const byteOrWord = if (w) "word" else "byte";
+    const op = switch (bytes[1] >> 3 & 0b111) {
+        0b000 => "add",
+        0b101 => "sub",
+        0b111 => "cmp",
+        else => unreachable,
+    };
+    switch (mod) {
+        0b00 => {
+            if (rm == 0b110) {
+                const displacement: u16 = (@as(u16, bytes[3]) << 8) + bytes[2];
+                const immediate = decoder.GetImmediate(bytes[4..], s, w);
+                tmp = try std.fmt.bufPrint(scratchpad, "{s} {s} [{d}], {d}\n", .{ op, byteOrWord, displacement, immediate });
+                bytesConsumed = if (!s and w) 6 else 5;
+            } else {
+                const dest = decoder.rmExpressions[rm];
+                const immediate = decoder.GetImmediate(bytes[2..], s, w);
+                tmp = try std.fmt.bufPrint(scratchpad, "{s} {s} [{s}], {d}\n", .{ op, byteOrWord, dest, immediate });
+                bytesConsumed = if (!s and w) 4 else 3;
+            }
+        },
+        0b01 => {
+            const displacement = bytes[2];
+            const dest = decoder.rmExpressions[rm];
+            const immediate = decoder.GetImmediate(bytes[3..], s, w);
+            if (displacement == 0) {
+                tmp = try std.fmt.bufPrint(scratchpad, "{s} {s} [{s}], {d}\n", .{ op, byteOrWord, dest, immediate });
+            } else {
+                tmp = try std.fmt.bufPrint(scratchpad, "{s} {s} [{s} + {d}], {d}\n", .{ op, byteOrWord, dest, displacement, immediate });
+            }
+            bytesConsumed = if (!s and w) 5 else 4;
+        },
+        0b10 => {
+            const displacement: u16 = (@as(u16, bytes[3]) << 8) + bytes[2];
+            const dest = decoder.rmExpressions[rm];
+            const immediate = decoder.GetImmediate(bytes[4..], s, w);
+            tmp = try std.fmt.bufPrint(scratchpad, "{s} {s} [{s} + {d}], {d}\n", .{ op, byteOrWord, dest, displacement, immediate });
+            bytesConsumed = if (!s and w) 6 else 5;
+        },
+        0b11 => {
+            const dest = if (w) decoder.wordRegisters[rm] else decoder.byteRegisters[rm];
+            const immediate = decoder.GetImmediate(bytes[2..], s, w);
+            tmp = try std.fmt.bufPrint(scratchpad, "{s} {s}, {d}\n", .{ op, dest, immediate });
+            bytesConsumed = if (!s and w) 4 else 3;
+        },
+        else => unreachable,
+    }
+    written = @truncate(tmp.len);
+    return .{ bytesConsumed, written };
+}
