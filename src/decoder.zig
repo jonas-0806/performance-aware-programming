@@ -1,6 +1,6 @@
 const std = @import("std");
-const inputPath = "/home/jjh/dev/performance-aware-programming/decoder/input/";
-const outputPath = "/home/jjh/dev/performance-aware-programming/decoder/output/";
+const inputPath = "/home/jjh/dev/performance-aware-programming/input/";
+const outputPath = "/home/jjh/dev/performance-aware-programming/output/";
 
 const debug = @import("debug.zig");
 const trashcan = @import("trashcan.zig");
@@ -15,7 +15,7 @@ const movDecoder = @import("decoders/movDecoder.zig");
 const addSubCmpDecoder = @import("decoders/addSubCompDecoder.zig");
 const jumpAndLoopDecoder = @import("decoders/jumpAndLoopDecoder.zig");
 
-pub fn decodeInstructionStream(source: []const u8, dest: []const u8) !void {
+pub fn decodeInstructionStreamToFile(source: []const u8, dest: []const u8) !void {
     var outputDir = try std.fs.openDirAbsolute(outputPath, .{});
     defer outputDir.close();
 
@@ -87,21 +87,21 @@ pub fn GetImmediate(bytes: []const u8, s: bool, w: bool) u16 {
 }
 
 test "listing37" {
-    try decodeInstructionStream("listing37", "listing37.asm");
+    try decodeInstructionStreamToFile("listing37", "listing37.asm");
     try std.testing.expect(try trashcan.filesEqual(inputPath, "listing37.asm", outputPath, "listing37.asm"));
 }
 
 test "listing38" {
-    try decodeInstructionStream("listing38", "listing38.asm");
+    try decodeInstructionStreamToFile("listing38", "listing38.asm");
     try std.testing.expect(try trashcan.filesEqual(inputPath, "listing38.asm", outputPath, "listing38.asm"));
 }
 
 test "listing39" {
-    try decodeInstructionStream("listing39", "listing39.asm");
+    try decodeInstructionStreamToFile("listing39", "listing39.asm");
     try std.testing.expect(try trashcan.filesEqual(inputPath, "listing39.asm", outputPath, "listing39.asm"));
 }
 
 test "listing41_nojumps" {
-    try decodeInstructionStream("listing41_nojumps", "listing41_nojumps.asm");
+    try decodeInstructionStreamToFile("listing41_nojumps", "listing41_nojumps.asm");
     try std.testing.expect(try trashcan.filesEqual(inputPath, "listing39.asm", outputPath, "listing39.asm"));
 }
