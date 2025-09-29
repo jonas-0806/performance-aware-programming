@@ -1,15 +1,31 @@
 const std = @import("std");
+pub const main = @import("main.zig");
 const inputPath = "/home/jjh/dev/performance-aware-programming/input/";
 const outputPath = "/home/jjh/dev/performance-aware-programming/output/";
 
 const debug = @import("debug.zig");
 const trashcan = @import("trashcan.zig");
 
+pub const byte_registers: [8]main.Register = .{ main.Register.al, main.Register.cl, main.Register.dl, main.Register.bl, main.Register.ah, main.Register.ch, main.Register.dh, main.Register.bh };
+pub const word_registers: [8]main.Register = .{ main.Register.ax, main.Register.cx, main.Register.dx, main.Register.bx, main.Register.sp, main.Register.bp, main.Register.si, main.Register.di };
+
 pub const byteRegisters: [8][]const u8 = .{ "al", "cl", "dl", "bl", "ah", "ch", "dh", "bh" };
 pub const wordRegisters: [8][]const u8 = .{ "ax", "cx", "dx", "bx", "sp", "bp", "si", "di" };
 
 // for memory mov, which expression does rm encode, except displacement and except when mod = 00 and r/m = 110
 pub const rmExpressions: [8][]const u8 = .{ "bx + si", "bx + di", "bp + si", "bp + di", "si", "di", "bp", "bx" };
+
+// for memory mov, which expression does rm encode, except displacement and except when mod = 00 and r/m = 110
+pub const rm_expressions: [8][2]?main.Register = .{
+    .{ main.Register.bx, main.Register.si },
+    .{ main.Register.bx, main.Register.di },
+    .{ main.Register.bp, main.Register.si },
+    .{ main.Register.bp, main.Register.di },
+    .{ main.Register.si, null },
+    .{ main.Register.di, null },
+    .{ main.Register.bp, null },
+    .{ main.Register.bx, null },
+};
 
 const movDecoder = @import("decoders/movDecoder.zig");
 const addSubCmpDecoder = @import("decoders/addSubCompDecoder.zig");
@@ -54,19 +70,19 @@ fn decode(slice: []u8, scratchpad: []u8) !struct { u3, u5 } {
     } else if (opCode >> 1 == 0b1010001) {
         return try movDecoder.decodeAccToMem(slice, scratchpad);
     } else if (opCode >> 2 == 0b0) {
-        return try addSubCmpDecoder.deodeRegMem(slice, scratchpad, "add");
+        return try addSubCmpDecoder.deodeRegMem(slice, scratchpad, main.Op.add);
     } else if (opCode >> 1 == 0b0000010) {
-        return try addSubCmpDecoder.decodeImmToAcc(slice, scratchpad, "add");
+        return try addSubCmpDecoder.decodeImmToAcc(slice, scratchpad, main.Op.add);
     } else if (opCode >> 2 == 0b100000) {
         return try addSubCmpDecoder.decodeImmToRegOrMem(slice, scratchpad);
     } else if (opCode >> 2 == 0b001010) {
-        return try addSubCmpDecoder.deodeRegMem(slice, scratchpad, "sub");
+        return try addSubCmpDecoder.deodeRegMem(slice, scratchpad, main.Op.sub);
     } else if (opCode >> 1 == 0b0010110) {
-        return try addSubCmpDecoder.decodeImmToAcc(slice, scratchpad, "sub");
+        return try addSubCmpDecoder.decodeImmToAcc(slice, scratchpad, main.Op.sub);
     } else if (opCode >> 2 == 0b001110) {
-        return try addSubCmpDecoder.deodeRegMem(slice, scratchpad, "cmp");
+        return try addSubCmpDecoder.deodeRegMem(slice, scratchpad, main.Op.cmp);
     } else if (opCode >> 1 == 0b0011110) {
-        return try addSubCmpDecoder.decodeImmToAcc(slice, scratchpad, "cmp");
+        return try addSubCmpDecoder.decodeImmToAcc(slice, scratchpad, main.Op.cmp);
     } else {
         return try jumpAndLoopDecoder.decodeJumpOrLoop(slice, scratchpad);
     }

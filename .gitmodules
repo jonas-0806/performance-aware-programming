@@ -1,6 +1,0 @@
-[submodule "sim/computer_enhance"]
-	path = sim/computer_enhance
-	url = https://github.com/cmuratori/computer_enhance
-[submodule "sim/decoder"]
-	path = sim/decoder
-	url = https://github.com/cmuratori/computer_enhance
