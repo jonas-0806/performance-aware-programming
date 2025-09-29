@@ -305,11 +305,6 @@ pub const Instruction = union(enum) {
 };
 
 pub fn main() !void {
-    var sp: [32]u8 = undefined;
-    var x = Instruction{ .reg_to_reg = RegToReg{ .dst = Register.ah, .src = Register.al, .op = Op.mov } };
-    const y = try x.print(&sp);
-    std.debug.print("{s}\n", .{sp[0..y]});
-
     try decoder.decodeInstructionStreamToFile("listing37", "listing37.asm");
     try decoder.decodeInstructionStreamToFile("listing38", "listing38.asm");
     try decoder.decodeInstructionStreamToFile("listing39", "listing39.asm");
