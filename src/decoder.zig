@@ -38,7 +38,7 @@ pub fn decodeInstructionStreamToFile(source: []const u8, dest: []const u8) !void
     var written: usize = try writer.write("bits 16\n\n");
 
     var scratchpad: [32]u8 = undefined;
-    var info: struct { u3, u5 } = undefined;
+    var info: struct { u3, u5, instruction.Instruction } = undefined;
     while (inputCursor < bytesRead) {
         const slice = input[inputCursor..@min(inputCursor + 6, bytesRead)];
         info = try decode(slice, scratchpad[0..]);
@@ -53,7 +53,23 @@ pub fn decodeInstructionStreamToFile(source: []const u8, dest: []const u8) !void
     _ = try destinationFile.write(result[0..written]);
 }
 
-fn decode(slice: []u8, scratchpad: []u8) !struct { u3, u5 } {
+pub fn decodeInstructionStream(source: []const u8, destination: *std.ArrayList(instruction.Instruction), allocator: std.mem.Allocator) !void {
+    var inputCursor: u32 = 0;
+    var scratchpad: [32]u8 = undefined;
+    var input_dir = try std.fs.openDirAbsolute(inputPath, .{});
+    defer input_dir.close();
+    const buffer = try input_dir.readFileAlloc(source, allocator, std.Io.Limit.unlimited);
+
+    var info: struct { u3, u5, instruction.Instruction } = undefined;
+    while (inputCursor < buffer.len) {
+        const slice = buffer[inputCursor..@min(inputCursor + 6, buffer.len)];
+        info = try decode(slice, scratchpad[0..]);
+        inputCursor += info.@"0";
+        try destination.append(allocator, info.@"2");
+    }
+}
+
+fn decode(slice: []u8, scratchpad: []u8) !struct { u3, u5, instruction.Instruction } {
     const opCode = slice[0];
     if (opCode >> 2 == 0b100010) {
         return try movDecoder.decodeRegMem(slice, scratchpad);

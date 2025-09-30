@@ -1,7 +1,7 @@
 const std = @import("std");
 const instruction = @import("../instruction.zig");
 
-pub fn decodeJumpOrLoop(bytes: []const u8, scratchpad: []u8) !struct { u3, u5 } {
+pub fn decodeJumpOrLoop(bytes: []const u8, scratchpad: []u8) !struct { u3, u5, instruction.Instruction } {
     const ip_inc8: i8 = @bitCast(bytes[1]);
     const ins = switch (bytes[0]) {
         0b01110100 => instruction.Instruction{ .jump = instruction.Jump{ .jump = instruction.JumpEnum.je, .ip_inc8 = ip_inc8 } },
@@ -28,5 +28,5 @@ pub fn decodeJumpOrLoop(bytes: []const u8, scratchpad: []u8) !struct { u3, u5 } 
     };
 
     const written = try ins.print(scratchpad);
-    return .{ 2, written };
+    return .{ 2, written, ins };
 }

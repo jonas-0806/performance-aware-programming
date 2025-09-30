@@ -3,7 +3,7 @@ const instruction = @import("../instruction.zig");
 const debug = @import("../debug.zig");
 const decoder = @import("../decoder.zig");
 
-pub fn deodeRegMem(bytes: []const u8, scratchpad: []u8, op: instruction.Op) !struct { u3, u5 } {
+pub fn deodeRegMem(bytes: []const u8, scratchpad: []u8, op: instruction.Op) !struct { u3, u5, instruction.Instruction } {
     var ins: instruction.Instruction = undefined;
     var written: u5 = undefined;
     var bytesConsumed: u3 = undefined;
@@ -133,10 +133,10 @@ pub fn deodeRegMem(bytes: []const u8, scratchpad: []u8, op: instruction.Op) !str
         },
         else => unreachable,
     }
-    return .{ bytesConsumed, written };
+    return .{ bytesConsumed, written, ins };
 }
 
-pub fn decodeImmToAcc(bytes: []const u8, scratchpad: []u8, op: instruction.Op) !struct { u3, u5 } {
+pub fn decodeImmToAcc(bytes: []const u8, scratchpad: []u8, op: instruction.Op) !struct { u3, u5, instruction.Instruction } {
     const w = bytes[0] & 0b1 == 1;
     const immediate =
         if (w) (@as(u16, bytes[2]) << 8) + bytes[1] else @as(u16, bytes[1]);
@@ -147,10 +147,10 @@ pub fn decodeImmToAcc(bytes: []const u8, scratchpad: []u8, op: instruction.Op) !
     } };
     const written = try ins.print(scratchpad);
     const bytesConsumed: u3 = if (w) 3 else 2;
-    return .{ bytesConsumed, written };
+    return .{ bytesConsumed, written, ins };
 }
 
-pub fn decodeImmToRegOrMem(bytes: []const u8, scratchpad: []u8) !struct { u3, u5 } {
+pub fn decodeImmToRegOrMem(bytes: []const u8, scratchpad: []u8) !struct { u3, u5, instruction.Instruction } {
     var ins: instruction.Instruction = undefined;
     var written: u5 = undefined;
     var bytesConsumed: u3 = undefined;
@@ -238,5 +238,5 @@ pub fn decodeImmToRegOrMem(bytes: []const u8, scratchpad: []u8) !struct { u3, u5
         else => unreachable,
     }
     written = try ins.print(scratchpad);
-    return .{ bytesConsumed, written };
+    return .{ bytesConsumed, written, ins };
 }

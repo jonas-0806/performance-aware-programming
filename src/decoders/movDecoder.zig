@@ -5,7 +5,7 @@ const decoder = @import("../decoder.zig");
 
 const op = instruction.Op.mov;
 
-pub fn decodeRegMem(bytes: []const u8, scratchpad: []u8) !struct { u3, u5 } {
+pub fn decodeRegMem(bytes: []const u8, scratchpad: []u8) !struct { u3, u5, instruction.Instruction } {
     var ins: instruction.Instruction = undefined;
     var written: u5 = undefined;
     var bytesConsumed: u3 = undefined;
@@ -121,10 +121,10 @@ pub fn decodeRegMem(bytes: []const u8, scratchpad: []u8) !struct { u3, u5 } {
         },
         else => unreachable,
     }
-    return .{ bytesConsumed, written };
+    return .{ bytesConsumed, written, ins };
 }
 
-pub fn decodeImmToReg(bytes: []u8, scratchpad: []u8) !struct { u3, u5 } {
+pub fn decodeImmToReg(bytes: []u8, scratchpad: []u8) !struct { u3, u5, instruction.Instruction } {
     const w = (bytes[0] >> 3) & 0b1 == 1;
     const reg = bytes[0] & 0b111;
     const immediate: u16 =
@@ -138,10 +138,10 @@ pub fn decodeImmToReg(bytes: []u8, scratchpad: []u8) !struct { u3, u5 } {
     } };
     const written = try ins.print(scratchpad);
     const bytesConsumed: u3 = if (w) 3 else 2;
-    return .{ bytesConsumed, written };
+    return .{ bytesConsumed, written, ins };
 }
 
-pub fn decodeMemToAcc(bytes: []u8, scratchpad: []u8) !struct { u3, u5 } {
+pub fn decodeMemToAcc(bytes: []u8, scratchpad: []u8) !struct { u3, u5, instruction.Instruction } {
     const w = bytes[0] & 0b1 == 1;
     const address: u16 = (@as(u16, bytes[2]) << 8) + bytes[1];
     const ins = instruction.Instruction{ .mem_to_reg = instruction.MemToReg{
@@ -150,10 +150,10 @@ pub fn decodeMemToAcc(bytes: []u8, scratchpad: []u8) !struct { u3, u5 } {
         .src = instruction.MemAddressExpression{ .disp = address },
     } };
     const written = try ins.print(scratchpad);
-    return .{ 3, written };
+    return .{ 3, written, ins };
 }
 
-pub fn decodeAccToMem(bytes: []u8, scratchpad: []u8) !struct { u3, u5 } {
+pub fn decodeAccToMem(bytes: []u8, scratchpad: []u8) !struct { u3, u5, instruction.Instruction } {
     const w = bytes[0] & 0b1 == 1;
     const address: u16 = (@as(u16, bytes[2]) << 8) + bytes[1];
     const ins = instruction.Instruction{ .reg_to_mem = instruction.RegToMem{
@@ -162,5 +162,5 @@ pub fn decodeAccToMem(bytes: []u8, scratchpad: []u8) !struct { u3, u5 } {
         .dst = instruction.MemAddressExpression{ .disp = address },
     } };
     const written = try ins.print(scratchpad);
-    return .{ 3, written };
+    return .{ 3, written, ins };
 }
