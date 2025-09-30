@@ -1,12 +1,12 @@
 const std = @import("std");
+const instruction = @import("../instruction.zig");
 const debug = @import("../debug.zig");
-const main = @import("../main.zig");
 const decoder = @import("../decoder.zig");
 
-const op = main.Op.mov;
+const op = instruction.Op.mov;
 
 pub fn decodeRegMem(bytes: []const u8, scratchpad: []u8) !struct { u3, u5 } {
-    var ins: main.Instruction = undefined;
+    var ins: instruction.Instruction = undefined;
     var written: u5 = undefined;
     var bytesConsumed: u3 = undefined;
     const d = bytes[0] & (1 << 1) > 0;
@@ -21,29 +21,29 @@ pub fn decodeRegMem(bytes: []const u8, scratchpad: []u8) !struct { u3, u5 } {
                 std.debug.assert(d);
                 const displacement: u16 = (@as(u16, bytes[3]) << 8) + bytes[2];
                 const dst = registers[reg];
-                ins = main.Instruction{ .mem_to_reg = main.MemToReg{
+                ins = instruction.Instruction{ .mem_to_reg = instruction.MemToReg{
                     .op = op,
                     .dst = dst,
-                    .src = main.MemAddressExpression{ .disp = displacement },
+                    .src = instruction.MemAddressExpression{ .disp = displacement },
                 } };
                 written = try ins.print(scratchpad);
                 bytesConsumed = 4;
             } else if (d) {
                 const src = decoder.rm_expressions[rm];
                 const dst = registers[reg];
-                ins = main.Instruction{ .mem_to_reg = main.MemToReg{
+                ins = instruction.Instruction{ .mem_to_reg = instruction.MemToReg{
                     .op = op,
                     .dst = dst,
-                    .src = main.MemAddressExpression{ .reg1 = src[0], .reg2 = src[1] },
+                    .src = instruction.MemAddressExpression{ .reg1 = src[0], .reg2 = src[1] },
                 } };
                 written = try ins.print(scratchpad);
                 bytesConsumed = 2;
             } else {
                 const src = registers[reg];
                 const dst = decoder.rm_expressions[rm];
-                ins = main.Instruction{ .reg_to_mem = main.RegToMem{
+                ins = instruction.Instruction{ .reg_to_mem = instruction.RegToMem{
                     .op = op,
-                    .dst = main.MemAddressExpression{ .reg1 = dst[0], .reg2 = dst[1] },
+                    .dst = instruction.MemAddressExpression{ .reg1 = dst[0], .reg2 = dst[1] },
                     .src = src,
                 } };
                 written = try ins.print(scratchpad);
@@ -55,7 +55,7 @@ pub fn decodeRegMem(bytes: []const u8, scratchpad: []u8) !struct { u3, u5 } {
             if (d) {
                 const src = decoder.rm_expressions[rm];
                 const dst = registers[reg];
-                ins = main.Instruction{ .mem_to_reg = main.MemToReg{ .op = op, .dst = dst, .src = main.MemAddressExpression{
+                ins = instruction.Instruction{ .mem_to_reg = instruction.MemToReg{ .op = op, .dst = dst, .src = instruction.MemAddressExpression{
                     .reg1 = src[0],
                     .reg2 = src[1],
                     .disp = if (displacement == 0) null else displacement,
@@ -64,10 +64,10 @@ pub fn decodeRegMem(bytes: []const u8, scratchpad: []u8) !struct { u3, u5 } {
             } else {
                 const src = registers[reg];
                 const dst = decoder.rm_expressions[rm];
-                ins = main.Instruction{ .reg_to_mem = main.RegToMem{
+                ins = instruction.Instruction{ .reg_to_mem = instruction.RegToMem{
                     .op = op,
                     .src = src,
-                    .dst = main.MemAddressExpression{
+                    .dst = instruction.MemAddressExpression{
                         .reg1 = dst[0],
                         .reg2 = dst[1],
                         .disp = if (displacement == 0) null else displacement,
@@ -82,10 +82,10 @@ pub fn decodeRegMem(bytes: []const u8, scratchpad: []u8) !struct { u3, u5 } {
             if (d) {
                 const src = decoder.rm_expressions[rm];
                 const dst = registers[reg];
-                ins = main.Instruction{ .mem_to_reg = main.MemToReg{
+                ins = instruction.Instruction{ .mem_to_reg = instruction.MemToReg{
                     .op = op,
                     .dst = dst,
-                    .src = main.MemAddressExpression{
+                    .src = instruction.MemAddressExpression{
                         .reg1 = src[0],
                         .reg2 = src[1],
                         .disp = displacement,
@@ -95,10 +95,10 @@ pub fn decodeRegMem(bytes: []const u8, scratchpad: []u8) !struct { u3, u5 } {
             } else {
                 const src = registers[reg];
                 const dst = decoder.rm_expressions[rm];
-                ins = main.Instruction{ .reg_to_mem = main.RegToMem{
+                ins = instruction.Instruction{ .reg_to_mem = instruction.RegToMem{
                     .op = op,
                     .src = src,
-                    .dst = main.MemAddressExpression{
+                    .dst = instruction.MemAddressExpression{
                         .reg1 = dst[0],
                         .reg2 = dst[1],
                         .disp = displacement,
@@ -111,7 +111,7 @@ pub fn decodeRegMem(bytes: []const u8, scratchpad: []u8) !struct { u3, u5 } {
         0b11 => {
             const src = if (d) registers[rm] else registers[reg];
             const dst = if (d) registers[reg] else registers[rm];
-            ins = main.Instruction{ .reg_to_reg = main.RegToReg{
+            ins = instruction.Instruction{ .reg_to_reg = instruction.RegToReg{
                 .op = op,
                 .src = src,
                 .dst = dst,
@@ -131,7 +131,7 @@ pub fn decodeImmToReg(bytes: []u8, scratchpad: []u8) !struct { u3, u5 } {
         if (w) (@as(u16, bytes[2]) << 8) + bytes[1] else bytes[1];
     const dst =
         if (w) decoder.word_registers[reg] else decoder.byte_registers[reg];
-    const ins = main.Instruction{ .imm_to_reg = main.ImmToReg{
+    const ins = instruction.Instruction{ .imm_to_reg = instruction.ImmToReg{
         .op = op,
         .dst = dst,
         .imm = immediate,
@@ -144,10 +144,10 @@ pub fn decodeImmToReg(bytes: []u8, scratchpad: []u8) !struct { u3, u5 } {
 pub fn decodeMemToAcc(bytes: []u8, scratchpad: []u8) !struct { u3, u5 } {
     const w = bytes[0] & 0b1 == 1;
     const address: u16 = (@as(u16, bytes[2]) << 8) + bytes[1];
-    const ins = main.Instruction{ .mem_to_reg = main.MemToReg{
+    const ins = instruction.Instruction{ .mem_to_reg = instruction.MemToReg{
         .op = op,
-        .dst = if (w) main.Register.ax else main.Register.al,
-        .src = main.MemAddressExpression{ .disp = address },
+        .dst = if (w) instruction.Register.ax else instruction.Register.al,
+        .src = instruction.MemAddressExpression{ .disp = address },
     } };
     const written = try ins.print(scratchpad);
     return .{ 3, written };
@@ -156,10 +156,10 @@ pub fn decodeMemToAcc(bytes: []u8, scratchpad: []u8) !struct { u3, u5 } {
 pub fn decodeAccToMem(bytes: []u8, scratchpad: []u8) !struct { u3, u5 } {
     const w = bytes[0] & 0b1 == 1;
     const address: u16 = (@as(u16, bytes[2]) << 8) + bytes[1];
-    const ins = main.Instruction{ .reg_to_mem = main.RegToMem{
+    const ins = instruction.Instruction{ .reg_to_mem = instruction.RegToMem{
         .op = op,
-        .src = if (w) main.Register.ax else main.Register.al,
-        .dst = main.MemAddressExpression{ .disp = address },
+        .src = if (w) instruction.Register.ax else instruction.Register.al,
+        .dst = instruction.MemAddressExpression{ .disp = address },
     } };
     const written = try ins.print(scratchpad);
     return .{ 3, written };
