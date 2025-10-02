@@ -1,25 +1,47 @@
 const std = @import("std");
 
-pub const Register = enum {
-    ax,
-    cx,
-    dx,
-    bx,
-    sp,
-    bp,
-    si,
-    di,
+pub const Register = enum(u4) {
+    ax = 0b000,
+    cx = 0b001,
+    dx = 0b010,
+    bx = 0b011,
+    sp = 0b100,
+    bp = 0b101,
+    si = 0b110,
+    di = 0b111,
 
-    al,
-    cl,
-    dl,
-    bl,
-    ah,
-    ch,
-    dh,
-    bh,
+    al = 0b1000,
+    cl = 0b1001,
+    dl = 0b1010,
+    bl = 0b1011,
 
-    fn toString(self: Register) []const u8 {
+    ah = 0b1100,
+    ch = 0b1101,
+    dh = 0b1110,
+    bh = 0b1111,
+
+    pub fn toIndex(self: Register) u3 {
+        return switch (self) {
+            .ax => 0b000,
+            .al => 0b000,
+            .ah => 0b000,
+            .cx => 0b001,
+            .cl => 0b001,
+            .ch => 0b001,
+            .dx => 0b010,
+            .dl => 0b010,
+            .dh => 0b010,
+            .bx => 0b011,
+            .bl => 0b011,
+            .bh => 0b011,
+            .sp => 0b100,
+            .bp => 0b101,
+            .si => 0b110,
+            .di => 0b111,
+        };
+    }
+
+    pub fn toString(self: Register) []const u8 {
         return switch (self) {
             .ax => "ax",
             .cx => "cx",
