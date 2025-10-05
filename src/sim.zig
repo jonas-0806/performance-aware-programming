@@ -1,4 +1,5 @@
 const std = @import("std");
+const main = @import("main.zig");
 const instruction = @import("instruction.zig");
 const Instruction = instruction.Instruction;
 const Register = instruction.Register;
@@ -14,14 +15,41 @@ const Op = instruction.Op;
 pub var registers: [8]u16 = .{0} ** 8;
 pub var zf: u1 = 0;
 pub var sf: u1 = 1;
+pub var ip: u32 = 0;
 
-pub fn execute(ins: Instruction, ip: *usize) void {
+const decoder = @import("decoder.zig");
+pub fn simulate(binaryName: []const u8) !void {
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+    const inputDir = try std.fs.openDirAbsolute(main.inputPath, .{});
+    const instructionStream = try inputDir.readFileAlloc(allocator, binaryName, 1024 * 1024 * 20);
+    var scratchpad: [32]u8 = undefined;
+    while (ip < instructionStream.len) {
+        const ip_cast = @as(usize, ip);
+        const decoded = try decoder.decode(
+            instructionStream[ip_cast..@min(ip_cast + 6, instructionStream.len)],
+            &scratchpad,
+        );
+        ip += decoded.@"0";
+        execute(decoded.@"2");
+    }
+}
+
+pub fn execute(ins: Instruction) void {
     switch (ins) {
         .imm_to_reg => executeImmToReg(ins.imm_to_reg),
         .reg_to_reg => executeRegToReg(ins.reg_to_reg),
+        .jump => executeJump(ins.jump),
         else => unreachable,
     }
-    ip.* += 1;
+}
+
+fn executeJump(ins: Jump) void {
+    switch (ins.jump) {
+        .jne => if (zf == 0) addToIp(ins.ip_inc8),
+        else => unreachable,
+    }
 }
 
 fn executeImmToReg(ins: ImmToReg) void {
@@ -79,10 +107,15 @@ fn add(reg: Register, value: u16) u16 {
     return result;
 }
 
+fn addToIp(ip_inc8: i8) void {
+    ip = @intCast(@as(i64, ip) + @as(i64, ip_inc8));
+}
+
 pub fn reset() void {
     registers = .{0} ** 8;
     zf = 0;
     sf = 0;
+    ip = 0;
 }
 
 pub fn printState() !void {

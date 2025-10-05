@@ -1,6 +1,6 @@
 const std = @import("std");
+const main = @import("main.zig");
 const instruction = @import("instruction.zig");
-const inputPath = "/home/jjh/dev/performance-aware-programming/input/";
 const outputPath = "/home/jjh/dev/performance-aware-programming/output/";
 
 const debug = @import("debug.zig");
@@ -31,7 +31,7 @@ pub fn decodeInstructionStreamToFile(source: []const u8, dest: []const u8) !void
 
     var input: [2048]u8 = undefined;
     var inputCursor: u32 = 0;
-    const bytesRead = try trashcan.readToBuffer(inputPath, source, &input);
+    const bytesRead = try trashcan.readToBuffer(main.inputPath, source, &input);
 
     var result: [2048]u8 = undefined;
     var writer = std.Io.Writer.fixed(&result);
@@ -56,9 +56,9 @@ pub fn decodeInstructionStreamToFile(source: []const u8, dest: []const u8) !void
 pub fn decodeInstructionStream(source: []const u8, destination: *std.ArrayList(instruction.Instruction), allocator: std.mem.Allocator) !void {
     var inputCursor: u32 = 0;
     var scratchpad: [32]u8 = undefined;
-    var input_dir = try std.fs.openDirAbsolute(inputPath, .{});
+    var input_dir = try std.fs.openDirAbsolute(main.inputPath, .{});
     defer input_dir.close();
-    const buffer = try input_dir.readFileAlloc(source, allocator, std.Io.Limit.unlimited);
+    const buffer = try input_dir.readFileAlloc(allocator, source, 1024 * 1024 * 20);
 
     var info: struct { u3, u5, instruction.Instruction } = undefined;
     while (inputCursor < buffer.len) {
@@ -69,7 +69,7 @@ pub fn decodeInstructionStream(source: []const u8, destination: *std.ArrayList(i
     }
 }
 
-fn decode(slice: []u8, scratchpad: []u8) !struct { u3, u5, instruction.Instruction } {
+pub fn decode(slice: []u8, scratchpad: []u8) !struct { u3, u5, instruction.Instruction } {
     const opCode = slice[0];
     if (opCode >> 2 == 0b100010) {
         return try movDecoder.decodeRegMem(slice, scratchpad);
@@ -114,20 +114,20 @@ pub fn GetImmediate(bytes: []const u8, s: bool, w: bool) u16 {
 
 test "listing37" {
     try decodeInstructionStreamToFile("listing37", "listing37.asm");
-    try std.testing.expect(try trashcan.filesEqual(inputPath, "listing37.asm", outputPath, "listing37.asm"));
+    try std.testing.expect(try trashcan.filesEqual(main.inputPath, "listing37.asm", outputPath, "listing37.asm"));
 }
 
 test "listing38" {
     try decodeInstructionStreamToFile("listing38", "listing38.asm");
-    try std.testing.expect(try trashcan.filesEqual(inputPath, "listing38.asm", outputPath, "listing38.asm"));
+    try std.testing.expect(try trashcan.filesEqual(main.inputPath, "listing38.asm", outputPath, "listing38.asm"));
 }
 
 test "listing39" {
     try decodeInstructionStreamToFile("listing39", "listing39.asm");
-    try std.testing.expect(try trashcan.filesEqual(inputPath, "listing39.asm", outputPath, "listing39.asm"));
+    try std.testing.expect(try trashcan.filesEqual(main.inputPath, "listing39.asm", outputPath, "listing39.asm"));
 }
 
 test "listing41_nojumps" {
     try decodeInstructionStreamToFile("listing41_nojumps", "listing41_nojumps.asm");
-    try std.testing.expect(try trashcan.filesEqual(inputPath, "listing39.asm", outputPath, "listing39.asm"));
+    try std.testing.expect(try trashcan.filesEqual(main.inputPath, "listing39.asm", outputPath, "listing39.asm"));
 }
