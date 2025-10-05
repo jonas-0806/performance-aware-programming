@@ -55,3 +55,33 @@ test "listing45_partial" {
     try std.testing.expect(sim.getReg(Register.di) == 0);
     sim.reset();
 }
+
+test "listing46" {
+    try simulate("listing46");
+    try std.testing.expect(sim.getReg(Register.ax) == 0);
+    try std.testing.expect(sim.getReg(Register.bx) == 0xe102);
+    try std.testing.expect(sim.getReg(Register.cx) == 0x0f01);
+    try std.testing.expect(sim.getReg(Register.dx) == 0);
+    try std.testing.expect(sim.getReg(Register.sp) == 0x03e6);
+    try std.testing.expect(sim.getReg(Register.bp) == 0);
+    try std.testing.expect(sim.getReg(Register.si) == 0);
+    try std.testing.expect(sim.getReg(Register.di) == 0);
+    try std.testing.expect(sim.zf == 1);
+    try std.testing.expect(sim.sf == 0);
+    sim.reset();
+}
+
+test "listing47" {
+    try simulate("listing47");
+    try std.testing.expect(sim.getReg(Register.ax) == 0);
+    try std.testing.expect(sim.getReg(Register.bx) == 0x9ca5);
+    try std.testing.expect(sim.getReg(Register.cx) == 0);
+    try std.testing.expect(sim.getReg(Register.dx) == 0x000a);
+    try std.testing.expect(sim.getReg(Register.sp) == 0x0063);
+    try std.testing.expect(sim.getReg(Register.bp) == 0x0062);
+    try std.testing.expect(sim.getReg(Register.si) == 0);
+    try std.testing.expect(sim.getReg(Register.di) == 0);
+    try std.testing.expect(sim.zf == 0);
+    try std.testing.expect(sim.sf == 1);
+    sim.reset();
+}

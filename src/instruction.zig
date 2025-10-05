@@ -1,6 +1,6 @@
 const std = @import("std");
 
-pub const Register = enum(u4) {
+pub const Register = enum(u5) {
     ax = 0b000,
     cx = 0b001,
     dx = 0b010,
@@ -15,30 +15,13 @@ pub const Register = enum(u4) {
     dl = 0b1010,
     bl = 0b1011,
 
-    ah = 0b1100,
-    ch = 0b1101,
-    dh = 0b1110,
-    bh = 0b1111,
+    ah = 0b11000,
+    ch = 0b11001,
+    dh = 0b11010,
+    bh = 0b11011,
 
     pub fn toIndex(self: Register) u3 {
-        return switch (self) {
-            .ax => 0b000,
-            .al => 0b000,
-            .ah => 0b000,
-            .cx => 0b001,
-            .cl => 0b001,
-            .ch => 0b001,
-            .dx => 0b010,
-            .dl => 0b010,
-            .dh => 0b010,
-            .bx => 0b011,
-            .bl => 0b011,
-            .bh => 0b011,
-            .sp => 0b100,
-            .bp => 0b101,
-            .si => 0b110,
-            .di => 0b111,
-        };
+        return @truncate(@intFromEnum(self) & 0b111);
     }
 
     pub fn toString(self: Register) []const u8 {

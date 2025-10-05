@@ -12,6 +12,8 @@ const Jump = instruction.Jump;
 const Op = instruction.Op;
 
 pub var registers: [8]u16 = .{0} ** 8;
+pub var zf: u1 = 0;
+pub var sf: u1 = 1;
 
 pub fn execute(ins: Instruction, ip: *usize) void {
     switch (ins) {
@@ -25,15 +27,24 @@ pub fn execute(ins: Instruction, ip: *usize) void {
 fn executeImmToReg(ins: ImmToReg) void {
     switch (ins.op) {
         .mov => setReg(ins.dst, ins.imm),
-        else => unreachable,
+        .add => setReg(ins.dst, add(ins.dst, ins.imm)),
+        .sub => setReg(ins.dst, sub(ins.dst, ins.imm)),
+        .cmp => _ = sub(ins.dst, ins.imm),
     }
 }
 
 fn executeRegToReg(ins: RegToReg) void {
     switch (ins.op) {
         .mov => setReg(ins.dst, getReg(ins.src)),
-        else => unreachable,
+        .add => setReg(ins.dst, add(ins.dst, getReg(ins.src))),
+        .sub => setReg(ins.dst, sub(ins.dst, getReg(ins.src))),
+        .cmp => _ = sub(ins.dst, getReg(ins.src)),
     }
+}
+
+fn updateFlags(value: u16) void {
+    zf = if (value == 0) 1 else 0;
+    sf = if (value & 0x8000 > 0) 1 else 0;
 }
 
 pub fn getReg(reg: Register) u16 {
@@ -56,11 +67,25 @@ fn setReg(reg: Register, value: u16) void {
     }
 }
 
-pub fn reset() void {
-    registers = .{0} ** 8;
+fn sub(reg: Register, value: u16) u16 {
+    const result = @subWithOverflow(getReg(reg), value).@"0";
+    updateFlags(result);
+    return result;
 }
 
-pub fn printRegisters() !void {
+fn add(reg: Register, value: u16) u16 {
+    const result = @addWithOverflow(getReg(reg), value).@"0";
+    updateFlags(result);
+    return result;
+}
+
+pub fn reset() void {
+    registers = .{0} ** 8;
+    zf = 0;
+    sf = 0;
+}
+
+pub fn printState() !void {
     std.debug.print(
         \\ 
         \\Registers:
@@ -73,6 +98,9 @@ pub fn printRegisters() !void {
         \\{s}: {x}
         \\{s}: {x}
         \\
+        \\Flags:
+        \\zf: {d}
+        \\sf: {d}
     , .{
         Register.ax.toString(), getReg(Register.ax),
         Register.bx.toString(), getReg(Register.bx),
@@ -82,5 +110,6 @@ pub fn printRegisters() !void {
         Register.bp.toString(), getReg(Register.bp),
         Register.si.toString(), getReg(Register.si),
         Register.di.toString(), getReg(Register.di),
+        zf,                     sf,
     });
 }
