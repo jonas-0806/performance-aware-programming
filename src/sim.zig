@@ -12,7 +12,7 @@ const ImmToReg = instruction.ImmToReg;
 const Jump = instruction.Jump;
 const Op = instruction.Op;
 
-var memory: [1024 * 64]u8 = undefined;
+var memory: [1024 * 64]u8 = .{0} ** (1024 * 64);
 
 pub var registers: [8]u16 = .{0} ** 8;
 pub var zf: u1 = 0;
@@ -42,8 +42,32 @@ pub fn execute(ins: Instruction) void {
     switch (ins) {
         .imm_to_reg => executeImmToReg(ins.imm_to_reg),
         .reg_to_reg => executeRegToReg(ins.reg_to_reg),
+        .imm_to_mem => executeImmToMem(ins.imm_to_mem),
+        .mem_to_reg => executeMemToReg(ins.mem_to_reg),
+        .reg_to_mem => executeRegToMem(ins.reg_to_mem),
         .jump => executeJump(ins.jump),
+    }
+}
+
+fn executeRegToMem(ins: RegToMem) void {
+    const address = ins.dst.getAddress();
+    const w = @intFromEnum(ins.src) <= 0b111;
+    switch (ins.op) {
+        .mov => writeToMem(address, getReg(ins.src), w),
+        .add => writeToMem(address, readFromMem(address, w) + getReg(ins.src), w),
+        .sub => writeToMem(address, @subWithOverflow(readFromMem(address, w), getReg(ins.src)).@"0", w),
         else => unreachable,
+    }
+}
+
+fn executeMemToReg(ins: MemToReg) void {
+    const address = ins.src.getAddress();
+    const w = @intFromEnum(ins.dst) <= 0b111;
+    switch (ins.op) {
+        .mov => setReg(ins.dst, readFromMem(address, w)),
+        .add => setReg(ins.dst, add(ins.dst, readFromMem(address, w))),
+        .sub => setReg(ins.dst, sub(ins.dst, readFromMem(address, w))),
+        .cmp => _ = sub(ins.dst, readFromMem(address, w)),
     }
 }
 
@@ -53,7 +77,7 @@ fn executeImmToMem(ins: ImmToMem) void {
         .mov => writeToMem(address, ins.imm, ins.word),
         .add => writeToMem(address, readFromMem(address, ins.word) + ins.imm, ins.word),
         .sub => writeToMem(address, readFromMem(address, ins.word) - ins.imm, ins.word),
-        else => unreachable,
+        .cmp => unreachable,
     }
 }
 
@@ -125,7 +149,7 @@ fn sub(reg: Register, value: u16) u16 {
 }
 
 fn add(reg: Register, value: u16) u16 {
-    const result = @addWithOverflow(getReg(reg), value).@"0";
+    const result: u16 = @addWithOverflow(getReg(reg), value).@"0";
     updateFlags(result);
     return result;
 }
@@ -145,6 +169,7 @@ pub fn reset() void {
 pub fn printState() !void {
     std.debug.print(
         \\ 
+        \\
         \\Registers:
         \\{s}: {x}
         \\{s}: {x}
@@ -158,6 +183,8 @@ pub fn printState() !void {
         \\Flags:
         \\zf: {d}
         \\sf: {d}
+        \\
+        \\ip: {d}
     , .{
         Register.ax.toString(), getReg(Register.ax),
         Register.bx.toString(), getReg(Register.bx),
@@ -168,5 +195,6 @@ pub fn printState() !void {
         Register.si.toString(), getReg(Register.si),
         Register.di.toString(), getReg(Register.di),
         zf,                     sf,
+        ip,
     });
 }

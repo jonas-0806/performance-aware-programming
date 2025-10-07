@@ -55,13 +55,13 @@ pub const MemAddressExpression = struct {
     pub fn getAddress(self: MemAddressExpression) u16 {
         var result: u16 = 0;
         if (self.reg1 != null) {
-            result += sim.getReg(self.reg1);
+            result += sim.getReg(self.reg1.?);
         }
         if (self.reg2 != null) {
-            result += sim.getReg(self.reg2);
+            result += sim.getReg(self.reg2.?);
         }
         if (self.disp != null) {
-            result += self.disp;
+            result += self.disp.?;
         }
         return result;
     }
