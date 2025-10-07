@@ -108,3 +108,17 @@ test "listing49" {
     try std.testing.expect(sim.ip == 14);
     sim.reset();
 }
+//
+// test "listing51" {
+//     try sim.simulate("listing51");
+//     // try std.testing.expect(sim.getReg(Register.bx) == 1);
+//     // try std.testing.expect(sim.getReg(Register.cx) == 2);
+//     // try std.testing.expect(sim.getReg(Register.dx) == 10);
+//     // try std.testing.expect(sim.getReg(Register.bp) == 4);
+//     try std.testing.expect(sim.readFromMem(1000, true) == 1);
+//     try std.testing.expect(sim.readFromMem(1002, true) == 2);
+//     try std.testing.expect(sim.readFromMem(1004, true) == 10);
+//     try std.testing.expect(sim.readFromMem(1006, true) == 4);
+//     try std.testing.expect(sim.ip == 48);
+//     sim.reset();
+// }

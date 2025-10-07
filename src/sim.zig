@@ -12,6 +12,8 @@ const ImmToReg = instruction.ImmToReg;
 const Jump = instruction.Jump;
 const Op = instruction.Op;
 
+var memory: [1024 * 64]u8 = undefined;
+
 pub var registers: [8]u16 = .{0} ** 8;
 pub var zf: u1 = 0;
 pub var sf: u1 = 1;
@@ -45,6 +47,16 @@ pub fn execute(ins: Instruction) void {
     }
 }
 
+fn executeImmToMem(ins: ImmToMem) void {
+    const address = ins.dst.getAddress();
+    switch (ins.op) {
+        .mov => writeToMem(address, ins.imm, ins.word),
+        .add => writeToMem(address, readFromMem(address, ins.word) + ins.imm, ins.word),
+        .sub => writeToMem(address, readFromMem(address, ins.word) - ins.imm, ins.word),
+        else => unreachable,
+    }
+}
+
 fn executeJump(ins: Jump) void {
     switch (ins.jump) {
         .jne => if (zf == 0) addToIp(ins.ip_inc8),
@@ -73,6 +85,17 @@ fn executeRegToReg(ins: RegToReg) void {
 fn updateFlags(value: u16) void {
     zf = if (value == 0) 1 else 0;
     sf = if (value & 0x8000 > 0) 1 else 0;
+}
+
+pub fn readFromMem(address: u16, word: bool) u16 {
+    return @as(u16, memory[address]) + if (word) @as(u16, memory[address + 1]) << 8 else 0;
+}
+
+fn writeToMem(address: u16, value: u16, word: bool) void {
+    memory[address] = @truncate(value);
+    if (word) {
+        memory[address + 1] = @intCast(value >> 8);
+    }
 }
 
 pub fn getReg(reg: Register) u16 {
@@ -112,6 +135,7 @@ fn addToIp(ip_inc8: i8) void {
 }
 
 pub fn reset() void {
+    memory = .{0} ** (1024 * 64);
     registers = .{0} ** 8;
     zf = 0;
     sf = 0;

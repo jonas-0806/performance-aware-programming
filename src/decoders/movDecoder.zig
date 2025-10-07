@@ -164,3 +164,87 @@ pub fn decodeAccToMem(bytes: []u8, scratchpad: []u8) !struct { u3, u5, instructi
     const written = try ins.print(scratchpad);
     return .{ 3, written, ins };
 }
+
+pub fn decodeImmToRegOrMem(bytes: []const u8, scratchpad: []u8) !struct { u3, u5, instruction.Instruction } {
+    var ins: instruction.Instruction = undefined;
+    var written: u5 = undefined;
+    var bytesConsumed: u3 = undefined;
+    const w = bytes[0] & 0b1 > 0;
+    const mod = (bytes[1] >> 6) & 0b11;
+    const rm = bytes[1] & 0b111;
+    switch (mod) {
+        0b00 => {
+            if (rm == 0b110) {
+                const displacement: u16 = (@as(u16, bytes[3]) << 8) + bytes[2];
+                const immediate = decoder.GetImmediate(bytes[4..], false, w);
+                ins = instruction.Instruction{ .imm_to_mem = instruction.ImmToMem{
+                    .op = op,
+                    .dst = instruction.MemAddressExpression{ .disp = displacement },
+                    .word = w,
+                    .imm = immediate,
+                } };
+                bytesConsumed = if (w) 6 else 5;
+            } else {
+                const dst = decoder.rm_expressions[rm];
+                const immediate = decoder.GetImmediate(bytes[2..], false, w);
+                ins = instruction.Instruction{ .imm_to_mem = instruction.ImmToMem{
+                    .op = op,
+                    .word = w,
+                    .imm = immediate,
+                    .dst = instruction.MemAddressExpression{
+                        .reg1 = dst[0],
+                        .reg2 = dst[1],
+                    },
+                } };
+                bytesConsumed = if (w) 4 else 3;
+            }
+        },
+        0b01 => {
+            const displacement = bytes[2];
+            const dst = decoder.rm_expressions[rm];
+            const immediate = decoder.GetImmediate(bytes[3..], false, w);
+            ins = instruction.Instruction{ .imm_to_mem = instruction.ImmToMem{
+                .op = op,
+                .word = w,
+                .imm = immediate,
+                .dst = instruction.MemAddressExpression{
+                    .reg1 = dst[0],
+                    .reg2 = dst[1],
+                    .disp = displacement,
+                },
+            } };
+            bytesConsumed = if (w) 5 else 4;
+        },
+        0b10 => {
+            const displacement: u16 = (@as(u16, bytes[3]) << 8) + bytes[2];
+            const dst = decoder.rm_expressions[rm];
+            const immediate = decoder.GetImmediate(bytes[4..], false, w);
+            ins = instruction.Instruction{ .imm_to_mem = instruction.ImmToMem{
+                .op = op,
+                .word = w,
+                .imm = immediate,
+                .dst = instruction.MemAddressExpression{
+                    .reg1 = dst[0],
+                    .reg2 = dst[1],
+                    .disp = displacement,
+                },
+            } };
+            bytesConsumed = if (w) 6 else 5;
+        },
+        0b11 => {
+            const dst = if (w) decoder.word_registers[rm] else decoder.byte_registers[rm];
+            const immediate = decoder.GetImmediate(bytes[2..], false, w);
+            ins = instruction.Instruction{
+                .imm_to_reg = instruction.ImmToReg{
+                    .op = op,
+                    .imm = immediate,
+                    .dst = dst,
+                },
+            };
+            bytesConsumed = if (w) 4 else 3;
+        },
+        else => unreachable,
+    }
+    written = try ins.print(scratchpad);
+    return .{ bytesConsumed, written, ins };
+}

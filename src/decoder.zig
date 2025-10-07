@@ -79,6 +79,8 @@ pub fn decode(slice: []u8, scratchpad: []u8) !struct { u3, u5, instruction.Instr
         return try movDecoder.decodeMemToAcc(slice, scratchpad);
     } else if (opCode >> 1 == 0b1010001) {
         return try movDecoder.decodeAccToMem(slice, scratchpad);
+    } else if (opCode >> 1 == 0b1100011) {
+        return try movDecoder.decodeImmToRegOrMem(slice, scratchpad);
     } else if (opCode >> 2 == 0b0) {
         return try addSubCmpDecoder.deodeRegMem(slice, scratchpad, instruction.Op.add);
     } else if (opCode >> 1 == 0b0000010) {
@@ -125,6 +127,11 @@ test "listing38" {
 test "listing39" {
     try decodeInstructionStreamToFile("listing39", "listing39.asm");
     try std.testing.expect(try trashcan.filesEqual(main.inputPath, "listing39.asm", outputPath, "listing39.asm"));
+}
+
+test "listing40_partial" {
+    try decodeInstructionStreamToFile("listing40_partial", "listing40_partial.asm");
+    try std.testing.expect(try trashcan.filesEqual(main.inputPath, "listing40_partial.asm", outputPath, "listing40_partial.asm"));
 }
 
 test "listing41_nojumps" {
