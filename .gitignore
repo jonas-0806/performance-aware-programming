@@ -1,2 +1,4 @@
 */zig-out/
 */.zig-cache/
+/haversine_input/
+/haversine_input_generator/main
