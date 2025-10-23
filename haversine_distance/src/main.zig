@@ -1,11 +1,10 @@
 const std = @import("std");
-const fmt = std.fmt;
+const parser = @import("json_haversine_input_parser_state_machine.zig");
 const fs = std.fs;
 const math = std.math;
-const ascii = std.ascii;
 
 const earth_radius: f64 = 6372.8;
-const Result = struct {
+pub const Result = struct {
     sum: f128,
     n: u64,
 
@@ -52,38 +51,9 @@ pub fn main() !void {
         if (read == 0) {
             break;
         }
-        const non_consumed = try parseAndAddHaversineDistances(buf[0..read], &result);
+        const non_consumed = try parser.parseAndAddHaversineDistances(buf[0..read], &result);
         // std.debug.print("{s}\n\n\n\n", .{buf[0..read]});
         offset += read - non_consumed;
     }
     std.debug.print("Average haversine distance: {d}\n", .{result.average()});
-}
-
-//current pair of points, laid out as x0, y0, x1, y1;
-var points: [4]f64 = undefined;
-var current_point: u2 = 0;
-var start: ?usize = null;
-fn parseAndAddHaversineDistances(buf: []u8, result: *Result) !u64 {
-    start = null;
-    for (buf, 0..) |b, i| {
-        if (i == 0 and (b == '-' or ascii.isDigit(b))) {
-            @branchHint(.unlikely);
-            start = i;
-        } else if (b == ':') {
-            start = i + 1;
-        } else if ((b == ',' or b == '}') and start != null) {
-            points[current_point] = try fmt.parseFloat(f64, buf[start.?..i]);
-            if (current_point == 3) {
-                current_point = 0;
-                result.addHaversineDistance(points[0], points[1], points[2], points[3]);
-            } else {
-                current_point += 1;
-            }
-            start = null;
-        }
-    }
-    return if (start == null)
-        0
-    else
-        buf.len - start.?;
 }
