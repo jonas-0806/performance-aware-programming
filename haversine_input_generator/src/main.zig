@@ -38,7 +38,7 @@ const Pair = struct {
             self.p1.x,
             self.p1.y,
             self.p2.x,
-            self.p1.y,
+            self.p2.y,
             if (add_comma) "," else "",
         });
     }
@@ -70,10 +70,10 @@ pub fn main() !void {
     var prng = std.Random.DefaultPrng.init(seed);
     const rnd = prng.random();
     const cwd = fs.cwd();
-    const dir = cwd.openDir("../../haversine_input", .{}) catch |err| switch (err) {
+    const dir = cwd.openDir("../haversine_input", .{}) catch |err| switch (err) {
         error.FileNotFound => blk: {
-            try cwd.makeDir("../../haversine_input");
-            break :blk try cwd.openDir("../../haversine_input", .{});
+            try cwd.makeDir("../haversine_input");
+            break :blk try cwd.openDir("../haversine_input", .{});
         },
         else => return err,
     };
