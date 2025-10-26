@@ -3,6 +3,9 @@ const parser = @import("json_haversine_input_parser_state_machine.zig");
 const fs = std.fs;
 const math = std.math;
 
+pub const profiler = @import("profiler.zig");
+const ProgramPart = profiler.ProgramPart;
+
 const earth_radius: f64 = 6372.8;
 pub const Result = struct {
     sum: f128,
@@ -16,6 +19,8 @@ pub const Result = struct {
     }
 
     pub fn addHaversineDistance(self: *Result, x0: f64, y0: f64, x1: f64, y1: f64) void {
+        profiler.start(.haversine);
+        defer profiler.end(.haversine);
         var lat1 = y0;
         var lat2 = y1;
         const lon1 = x0;
@@ -41,13 +46,19 @@ pub const Result = struct {
 };
 
 pub fn main() !void {
+    profiler.init();
+    defer profiler.print();
+    profiler.start(.io);
     const file = try std.fs.openFileAbsolute("/home/jjh/dev/performance-aware-programming/haversine_input/input.json", .{});
+    profiler.end(.io);
     var result = Result.init();
     var buf: [16384]u8 = undefined;
     var read: usize = undefined;
     var offset: usize = 0;
     while (true) {
+        profiler.start(.io);
         read = try file.pread(&buf, offset);
+        profiler.end(.io);
         if (read == 0) {
             break;
         }
