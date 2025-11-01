@@ -4,7 +4,7 @@ const fs = std.fs;
 const math = std.math;
 
 pub const profiler = @import("profiler.zig");
-const ProgramPart = profiler.ProgramPart;
+const ProgramPart = profiler.ProfilingTarget;
 
 const earth_radius: f64 = 6372.8;
 pub const Result = struct {
@@ -25,7 +25,6 @@ pub const Result = struct {
         var lat2 = y1;
         const lon1 = x0;
         const lon2 = x1;
-        // std.debug.print("x0: {d}, y0: {d}, x1: {d}, y1: {d}\n", .{ lon1, lat1, lon2, lat2 });
 
         const d_lat = math.degreesToRadians(lat2 - lat1);
         const d_lon = math.degreesToRadians(lon2 - lon1);
@@ -48,9 +47,7 @@ pub const Result = struct {
 pub fn main() !void {
     profiler.init();
     defer profiler.print();
-    profiler.start(.io);
     const file = try std.fs.openFileAbsolute("/home/jjh/dev/performance-aware-programming/haversine_input/input.json", .{});
-    profiler.end(.io);
     var result = Result.init();
     var buf: [16384]u8 = undefined;
     var read: usize = undefined;
@@ -63,8 +60,7 @@ pub fn main() !void {
             break;
         }
         const non_consumed = try parser.parseAndAddHaversineDistances(buf[0..read], &result);
-        // std.debug.print("{s}\n\n\n\n", .{buf[0..read]});
         offset += read - non_consumed;
     }
-    std.debug.print("Average haversine distance: {d}\n", .{result.average()});
+    std.debug.print("Average haversine distance: {d}\n\n", .{result.average()});
 }
