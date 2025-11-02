@@ -136,14 +136,14 @@ pub fn print() void {
     }
 
     std.debug.print(
-        "Total time spent{s}:                            {d} ms (100%)\n",
+        "Total time spent{s}:     {d} ms (100%)\n",
         .{ " " ** (longest_name), ms(total_elapsed_cycles) },
     );
 
     inline for (@typeInfo(ProfilingTarget).@"enum".fields) |f| {
         const anchor = anchors[f.value];
         std.debug.print(
-            "Time spent on '{s}{s}':                            {d} ms ({d:.2}%",
+            "Time spent on '{s}{s}':     {d} ms ({d:.2}%",
             .{
                 f.name,
                 " " ** (longest_name - f.name.len),
@@ -153,7 +153,7 @@ pub fn print() void {
         );
         const exclusive_cycles = anchor.exclusiveCycles();
         if (exclusive_cycles != anchor.total_cycles) {
-            std.debug.print(", {d:.2}% exclusive", .{exclusive_cycles});
+            std.debug.print(", {d:.2}% exclusive", .{percent(exclusive_cycles)});
         }
         std.debug.print(")\n", .{});
     }
