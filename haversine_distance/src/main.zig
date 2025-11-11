@@ -4,6 +4,7 @@ const fs = std.fs;
 const math = std.math;
 
 pub const profiler = @import("profiler.zig");
+const repetition_tester = @import("repetition_tester.zig");
 const ProgramPart = profiler.ProfilingTarget;
 
 const earth_radius: f64 = 6372.8;
@@ -20,7 +21,7 @@ pub const Result = struct {
 
     pub fn addHaversineDistance(self: *Result, x0: f64, y0: f64, x1: f64, y1: f64) void {
         profiler.start(.haversine);
-        defer profiler.end(.haversine);
+        defer profiler.end(.haversine, 4 * @typeInfo(@TypeOf(x0)).float.bits >> 3);
         var lat1 = y0;
         var lat2 = y1;
         const lon1 = x0;
@@ -44,9 +45,24 @@ pub const Result = struct {
     }
 };
 
+const repetition_test = true;
+
 pub fn main() !void {
     profiler.init();
     defer profiler.print();
+    if (repetition_test) {
+        repetition_tester.init(1000);
+        while (repetition_tester.continueTesting()) {
+            repetition_tester.start();
+            try run();
+            repetition_tester.end();
+        }
+    } else {
+        try run();
+    }
+}
+
+fn run() !void {
     const file = try std.fs.openFileAbsolute("/home/jjh/dev/performance-aware-programming/haversine_input/input.json", .{});
     var result = Result.init();
     var buf: [16384]u8 = undefined;
@@ -55,7 +71,7 @@ pub fn main() !void {
     while (true) {
         profiler.start(.io);
         read = try file.pread(&buf, offset);
-        profiler.end(.io);
+        profiler.end(.io, read);
         if (read == 0) {
             break;
         }

@@ -11,7 +11,7 @@
 // deducted from their exclusive time
 
 const std = @import("std");
-const enabled = true;
+pub const enabled = true;
 
 pub const ProfilingTarget = enum(u8) {
     parsing,
@@ -23,6 +23,7 @@ const ProfilingAnchor = struct {
     profiling_target: ProfilingTarget,
     last_cycles_timestamp: ?u64,
     total_cycles: u64,
+    total_bytes_processed: u64,
     parent: ?ProfilingTarget,
     //recursion
     nested_starts: u64,
@@ -32,6 +33,7 @@ const ProfilingAnchor = struct {
             .profiling_target = program_part,
             .last_cycles_timestamp = null,
             .total_cycles = 0,
+            .total_bytes_processed = 0,
             .parent = null,
             .nested_starts = 0,
         };
@@ -47,6 +49,16 @@ const ProfilingAnchor = struct {
         std.debug.assert(self.total_cycles >= cycles_spent_by_children);
         return self.total_cycles - cycles_spent_by_children;
     }
+
+    pub fn megaBytesProcessed(self: ProfilingAnchor) f64 {
+        return if (self.total_bytes_processed == 0) 0 else @as(f64, @floatFromInt(self.total_bytes_processed)) / (1024 * 1024);
+    }
+
+    //in GB/s
+    pub fn throughput(self: ProfilingAnchor) f64 {
+        return (megaBytesProcessed(self) / 1024) /
+            (@as(f64, @floatFromInt(ms(self.total_cycles))) / 1000);
+    }
 };
 
 var program_start_cycles_timestamp: u64 = undefined;
@@ -56,12 +68,14 @@ const number_of_profiling_targets = @typeInfo(ProfilingTarget).@"enum".fields.le
 var anchors: [number_of_profiling_targets]ProfilingAnchor = undefined;
 var most_recently_started: ?ProfilingTarget = null;
 
-var cpu_frequency: u64 = undefined;
+pub var cpu_frequency: u64 = undefined;
 
 pub fn init() void {
     if (!enabled) {
         return;
     }
+
+    calibrate();
 
     inline for (0..number_of_profiling_targets) |i| {
         anchors[i] = ProfilingAnchor.init(@enumFromInt(i));
@@ -71,7 +85,7 @@ pub fn init() void {
 }
 
 // https://github.com/jnordwick/tempus/blob/4cf28a7e04bf2195c04c9400c2db6c37276f75bb/src/tsc.zig
-fn rdtsc() u64 {
+pub fn rdtsc() u64 {
     var hi: u32 = 0;
     var low: u32 = 0;
 
@@ -101,7 +115,7 @@ pub fn start(part: ProfilingTarget) void {
     most_recently_started = part;
 }
 
-pub fn end(part: ProfilingTarget) void {
+pub fn end(part: ProfilingTarget, bytes_processed: u64) void {
     if (!enabled) {
         return;
     }
@@ -116,6 +130,7 @@ pub fn end(part: ProfilingTarget) void {
 
     std.debug.assert(anchor.last_cycles_timestamp != null);
     anchor.total_cycles += rdtsc() - anchor.last_cycles_timestamp.?;
+    anchor.total_bytes_processed += bytes_processed;
     anchor.last_cycles_timestamp = null;
     most_recently_started = anchor.parent orelse null;
 }
@@ -127,7 +142,9 @@ pub fn print() void {
     const program_end = rdtsc();
     total_elapsed_cycles = program_end - program_start_cycles_timestamp;
 
-    calibrate();
+    for (anchors) |anchor| {
+        std.debug.assert(anchor.nested_starts == 0);
+    }
 
     //figure out padding
     comptime var longest_name: u8 = 0;
@@ -155,11 +172,18 @@ pub fn print() void {
         if (exclusive_cycles != anchor.total_cycles) {
             std.debug.print(", {d:.2}% exclusive", .{percent(exclusive_cycles)});
         }
-        std.debug.print(")\n", .{});
+        if (anchor.total_bytes_processed > 0) {
+            std.debug.print(
+                "). Processed {d:.2}MB at {d:.2}GB/s\n",
+                .{ anchor.megaBytesProcessed(), anchor.throughput() },
+            );
+        } else {
+            std.debug.print(").\n", .{});
+        }
     }
 }
 
-fn ms(cycles: u64) u64 {
+pub fn ms(cycles: u64) u64 {
     return cycles * std.time.ms_per_s / cpu_frequency;
 }
 

@@ -10,7 +10,7 @@ var start: ?usize = null;
 
 pub fn parseAndAddHaversineDistances(buf: []u8, result: *Result) !u64 {
     profiler.start(.parsing);
-    defer profiler.end(.parsing);
+    defer profiler.end(.parsing, buf.len);
     start = null;
     for (buf, 0..) |b, i| {
         if (i == 0 and (b == '-' or std.ascii.isDigit(b))) {
@@ -22,9 +22,7 @@ pub fn parseAndAddHaversineDistances(buf: []u8, result: *Result) !u64 {
             points[current_point] = try std.fmt.parseFloat(f64, buf[start.?..i]);
             if (current_point == 3) {
                 current_point = 0;
-                profiler.end(.parsing);
                 result.addHaversineDistance(points[0], points[1], points[2], points[3]);
-                profiler.start(.parsing);
             } else {
                 current_point += 1;
             }
