@@ -2,3 +2,5 @@
 */.zig-cache/
 /haversine_input/
 *main
+*.a
+*.o
