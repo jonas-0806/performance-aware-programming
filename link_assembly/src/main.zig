@@ -23,13 +23,18 @@ pub fn main() !void {
     rep_tester.init(10);
 
     var allocator: std.heap.DebugAllocator(.{}) = .init;
-    const buffer = try allocator.allocator().alloc(u8, 1024 * 1024 * 1024);
-    defer allocator.allocator().free(buffer);
+    var buf = try allocator.allocator().alloc(u8, 1024 * 1024 * 1024);
+    defer allocator.allocator().free(buf);
+    // on some OSes, virtual pages dont get mapped to physical pages until they are written to
+    // so write some garbage to the buffer to force mapping
+    for (0..buf.len) |i| {
+        buf[i] = 42;
+    }
 
     while (rep_tester.continueTesting()) {
         rep_tester.start();
         profiler.start(.ten);
-        ReadWithin(buffer.ptr, (1024 * 1024 * 32) - 1);
+        ReadWithin(buf.ptr, (1024 * 1024 * 32) - 1);
         profiler.end(.ten, 1024 * 1024 * 1024);
         rep_tester.end();
     }
