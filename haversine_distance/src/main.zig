@@ -45,7 +45,7 @@ pub const Result = struct {
     }
 };
 
-const repetition_test = true;
+const repetition_test = false;
 
 pub fn main() !void {
     profiler.init();
