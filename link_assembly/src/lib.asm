@@ -159,6 +159,9 @@ Read256Bits2x:
 	jnle .loop
 	ret
 
+;4 loads take two cycles (on zen2)
+;no dependency chain is longer than 2, so we should be able to do the adds, movs, cmps simultaneously with the loads,
+;keeping the load ports saturated
 ReadWithin:
 	align 64
 	xor r8, r8
