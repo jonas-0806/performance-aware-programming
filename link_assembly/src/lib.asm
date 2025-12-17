@@ -13,6 +13,8 @@ global Read2Write2
 global Read128Bits2x
 global Read256Bits2x
 global ReadWithin
+global ReadWithinUnaligned
+global ReadBadL1
 
 section .text
 
@@ -179,4 +181,38 @@ ReadWithin:
 	add rax, 128
 	cmp rax, 1073741824
 	jne .loop
+	ret
+
+ReadWithinUnaligned:
+	align 64
+	xor r8, r8
+	xor r9, r9
+	xor rax, rax
+.loop:
+	mov r9, rdi
+	add r9, r8
+	vmovdqu ymm0, [r9 + 1]
+	vmovdqu ymm0, [r9 + 33]
+	vmovdqu ymm0, [r9 + 65]
+	vmovdqu ymm0, [r9 + 97]
+	add r8, 128
+	and r8, rsi
+	add rax, 128
+	cmp rax, 1073741824
+	jne .loop
+	ret
+
+ReadBadL1:
+	align 64
+	xor r8, r8
+.loop:
+	mov r9, rdi
+	add r9, r8
+	vmovdqu ymm0, [r9]
+	vmovdqu ymm0, [r9]
+	vmovdqu ymm0, [r9]
+	vmovdqu ymm0, [r9]
+	add r8, rsi
+	cmp rdx, r8
+	jnle .loop
 	ret

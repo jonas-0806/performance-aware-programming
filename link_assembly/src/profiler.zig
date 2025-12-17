@@ -75,7 +75,8 @@ pub fn init() void {
         return;
     }
 
-    calibrate();
+    // calibrate();
+    cpu_frequency = 3600000000;
 
     inline for (0..number_of_profiling_targets) |i| {
         anchors[i] = ProfilingAnchor.init(@enumFromInt(i));
@@ -183,7 +184,7 @@ pub fn print() void {
     }
 }
 
-pub fn ms(cycles: u64) u64 {
+pub fn ms(cycles: u64) u128 {
     return cycles * std.time.ms_per_s / cpu_frequency;
 }
 
